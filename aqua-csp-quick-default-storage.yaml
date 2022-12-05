@@ -1,0 +1,1434 @@
+apiVersion: v1
+data:
+  ### Aqua database password. Defaults to "password". Please change the same if needed.
+  password: cGFzc3dvcmQK
+kind: Secret
+metadata:
+  annotations:
+    description: Aqua database password secret
+  labels:
+    deployedby: aqua-yaml
+  name: aqua-db
+  namespace: aqua
+type: Opaque
+---
+apiVersion: v1
+data:
+  ### Aqua database password. Defaults to "password". Please change the same if needed.
+  password: cGFzc3dvcmQK
+kind: Secret
+metadata:
+  annotations:
+    description: Aqua database password secret
+  labels:
+    deployedby: aqua-yaml
+  name: aqua-audit-db
+  namespace: aqua
+type: Opaque
+---
+apiVersion: v1
+data:
+  ### Aqua enforcer token input needed - Base64 encoded ###
+  token: "dG9rZW4="
+kind: Secret
+metadata:
+  annotations:
+    description: Aqua Enforcer token secret
+  labels:
+    deployedby: aqua-yaml
+  name: enforcer-token
+  namespace: aqua
+type: Opaque
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aqua-csp-db-config
+  namespace: aqua
+data:
+  AQUA_ENV_SIZE: "S" # Possible values: “S”, “M”, “L”, defaults to “S”.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aqua-csp-server-config
+  namespace: aqua
+data:  
+  # The name of the HTTP header used by the Aqua Server for authentication. Defaults to the standard Authorization header. Can be used when running behind reverse proxies that override this header.
+  #AUTHORIZATION_HEADER: "aqua-auth"
+  # DNS name or IP address of the host of the Postgres Audit database.
+  SCALOCK_AUDIT_DBHOST: "aqua-audit-db" 
+  # Name of the Postgres Audit database; all letters must be lower-case
+  SCALOCK_AUDIT_DBNAME: "slk_audit"
+  # Port of the Postgres Audit database.
+  SCALOCK_AUDIT_DBPORT: "5432"
+  # Set the value of this variable to require to strictly require an SSL encrypted connection to the Postgres Audit database.
+  SCALOCK_AUDIT_DBSSL: "require"
+  # Username for connection to the Postgres Audit database.
+  SCALOCK_AUDIT_DBUSER: "postgres"
+  # DNS name or IP address of the host of the Postgres configuration database.
+  SCALOCK_DBHOST: "aqua-db"
+  # Name of the Postgres configuration database name; all letters must be lower-case.
+  SCALOCK_DBNAME: "scalock"
+  # Port of the Postgres configuration database.
+  SCALOCK_DBPORT: "5432"
+  # Set the value of this variable to require to strictly require an SSL-encrypted connection to the Postgres configuration database.
+  SCALOCK_DBSSL: "require"
+  # Username for connection to the Postgres configuration database
+  SCALOCK_DBUSER: "postgres"
+  # Setting this might be helpful for problem determination. Acceptable values are DEBUG, INFO, WARN, and ERROR
+  SCALOCK_LOG_LEVEL: "INFO"
+  # Configure this variable with the IP address or DNS name of the Aqua Server, including the port number (8443 by default).
+  AQUA_CONSOLE_SECURE_ADDRESS: "aqua-web:443"
+  # Specify the desired public IP address of the Aqua Gateway. Used to make the Enforcer connect to the Gateway through this IP address.
+  SCALOCK_GATEWAY_PUBLIC_IP: "aqua-gateway"
+  # Specify 0.0.0.0:80 to bring up an HTTP responder on port 80, for use with active load balancers. The port can be changed as needed.
+  HEALTH_MONITOR: "0.0.0.0:8082"
+  # Server's private key for HTTPS and Mutual Auth
+  #AQUA_PRIVATE_KEY: "/opt/aquasec/ssl/key.pem"
+  # Server's public key for HTTPS and Mutual Auth
+  #AQUA_PUBLIC_KEY: "/opt/aquasec/ssl/cert.pem"
+  # Server's root CA cert for HTTPS and Mutual Auth. The root CA certificate file should be mutual for both Gateway and Server certificates
+  #AQUA_ROOT_CA: "/opt/aquasec/ssl/ca.pem"
+  AQUA_CLUSTER_MODE: "active-active"
+  # DNS name or IP address of the host of the Postgres pubsub database
+  AQUA_PUBSUB_DBHOST: "aqua-db"
+  # Database schema name; set this to the name of your choice. All letters must be lower-case.
+  AQUA_PUBSUB_DBNAME: "aqua_pubsub"
+  # Username for connection to the Postgres pubsub database
+  AQUA_PUBSUB_DBUSER: "postgres"
+  AQUA_PUBSUB_DBPORT: "5432"
+  # DNS name or IP address of an Aqua Gateway that the Aqua Enforcer will first connect to.
+  BATCH_INSTALL_GATEWAY: "aqua-gateway"
+  # Orchestrator type to be configured on enforcers.
+  BATCH_INSTALL_ORCHESTRATOR: "Kubernetes"
+  # Name of the Batch Install object used to connect Aqua Enforcers to the environment.
+  BATCH_INSTALL_NAME: "aquayaml-default" 
+  AQUA_GATEWAY_TOKEN: "1234"
+  AQUA_DEFAULT_GATEWAY_TOKEN: "1234"
+  BATCH_INSTALL_TOKEN: "token"
+  # Automatic connection KE Batch Install (Enforcer Group) name + token
+  AQUA_KE_GROUP_NAME: "aquayaml-default-ke"
+  AQUA_KE_GROUP_TOKEN: "token-ke"
+  # URL of HTTPS proxy, if used.
+  #https_proxy: ""
+  # URL of HTTP proxy, if used.
+  #http_proxy: ""
+  # List of addresses that bypass the proxy. Specify the URLs of internal private registries, if used.
+  #no_proxy: ""
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aqua-csp-enforcer
+  namespace: aqua
+data:
+  AQUA_HEALTH_MONITOR_ENABLED: "true"
+  AQUA_INSTALL_PATH: "/var/lib/aquasec"
+  AQUA_SERVER: "aqua-gateway:8443"
+  RESTART_CONTAINERS: "no"
+  AQUA_LOGICAL_NAME: ""
+  AQUA_EXPRESS_MODE: "true"
+---
+apiVersion: v1
+imagePullSecrets:
+- name: aqua-registry
+kind: ServiceAccount
+metadata:
+  annotations:
+    description: Service account for pulling Aqua images and for Aqua privileged
+  labels:
+    deployedby: aqua-yaml
+  name: aqua-sa
+  namespace: aqua
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.example.com/aggregate-to-monitoring: "true"
+    deployedby: aqua-yaml
+  name: aqua-discovery-cr
+  namespace: aqua
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "services", "endpoints", "pods", "deployments", "namespaces","componentstatuses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aqua-discovery-crb
+  namespace: aqua
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: aqua-discovery-cr
+subjects:
+  - kind: ServiceAccount
+    name: aqua-sa
+    namespace: aqua
+---
+# # Create PV for the Aqua Database
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: aqua-db-pv
+#   namespace: aqua
+#   labels:
+#     for_pod: aqua-db
+# spec:
+#   persistentVolumeReclaimPolicy: Retain
+#   capacity:
+#     storage: 50Gi
+#   accessModes:
+#     - ReadWriteOnce
+# ---
+# # Create a PVC for the Aqua Database
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: aqua-db-pvc
+#   namespace: aqua
+# spec:
+#   selector:
+#     matchLabels:
+#       for_pod: aqua-db
+#   accessModes:
+#   - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 50Gi
+#   volumeName: aqua-db-pv
+# ---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: aqua-audit-db
+    deployedby: aqua-yaml
+  name: aqua-audit-db
+  namespace: aqua
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: aqua-audit-db
+  type: ClusterIP 
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: aqua-audit-db
+  namespace: aqua
+  labels:
+    app: aqua-audit-db
+    aqua.component: database-audit
+    deployedby: aqua-yaml
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aqua-audit-db
+  template:
+    metadata:
+      labels:
+        app: aqua-audit-db
+      name: aqua-audit-db
+      namespace: aqua
+    spec:
+      containers:
+        - name: aqua-audit-db
+          image: registry.aquasec.com/database:2022.4
+          ports:
+            - name: aqua-audit-db
+              containerPort: 5432
+              protocol: TCP
+          volumeMounts:
+            - name: postgres-audit-db
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres
+          envFrom:
+            - configMapRef:
+                name: aqua-csp-db-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: aqua-db
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      serviceAccountName: aqua-sa
+      serviceAccount: aqua-sa
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-audit-db
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 50G
+  serviceName: aqua-audit-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: aqua-db
+    aqua.component: database
+    deployedby: aqua-yaml
+  name: aqua-db
+  namespace: aqua
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: aqua-db
+  type: ClusterIP 
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: aqua-db
+  namespace: aqua
+  labels:
+    app: aqua-db
+    deployedby: aqua-yaml
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aqua-db
+  template:
+    metadata:
+      labels:
+        app: aqua-db
+      name: aqua-db
+      namespace: aqua
+    spec:
+      containers:
+        - name: aqua-db
+          image: registry.aquasec.com/database:2022.4
+          ports:
+            - name: aqua-db
+              containerPort: 5432
+              protocol: TCP
+          volumeMounts:
+            - name: postgres-db
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres
+          envFrom:
+            - configMapRef:
+                name: aqua-csp-db-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: aqua-db
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      serviceAccountName: aqua-sa
+      serviceAccount: aqua-sa
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-db
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 50G
+  serviceName: aqua-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aqua-web
+  namespace: aqua
+  labels:
+    app: aqua-web
+spec:      
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: 8443
+      name: aqua-web-ssl
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+      name: aqua-web
+  selector:
+    app: aqua-web
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aqua-web
+  namespace: aqua
+  labels:
+    app: aqua-web
+    aqua.component: server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aqua-web
+  template:
+    metadata:
+      labels:
+        app: aqua-web
+      name: aqua-web
+    spec:
+      securityContext:
+        runAsUser: 11431
+        runAsGroup: 11433
+        fsGroup: 11433
+      serviceAccount: aqua-sa
+      restartPolicy: Always
+      containers:
+      - name: aqua-web
+        image: registry.aquasec.com/console:2022.4
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8443
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: aqua-csp-server-config
+        # - secretRef:
+        #     name: aqua-csp-server-secret
+        env:
+        - name: AQUA_PUBSUB_DBPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: aqua-db
+        - name: SCALOCK_AUDIT_DBPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: aqua-audit-db
+        - name: SCALOCK_DBPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: aqua-db
+        - name: AQUA_FF_OVERRIDES
+          value: '{"SLK-45284": true,"SLK-42747": true,"SLK-42525": true,"SLK-41253": true,"SLK-44691": true}'
+      #   volumeMounts:
+      #   - mountPath: /opt/aquasec/ssl
+      #     name: aqua-grpc-web
+      #     readOnly: true
+      # volumes:
+      # - name: aqua-grpc-web
+      #   secret:
+      #     secretName: aqua-grpc-web
+      #     items:
+      #     - key: aqua_web.crt
+      #       path: cert.pem
+      #     - key: aqua_web.key
+      #       path: key.pem
+      #     - key: rootCA.crt
+      #       path: ca.pem
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aqua-gateway
+  namespace: aqua
+  labels:
+    app: aqua-gateway
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8443
+      protocol: TCP
+      targetPort: 8443
+      name: aqua-gateway-ssl
+    - port: 3622
+      protocol: TCP
+      targetPort: 3622
+      name: aqua-gateway
+  selector:
+    app: aqua-gateway
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: aqua-gateway
+    aqua.component: gateway
+  name: aqua-gateway
+  namespace: aqua
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aqua-gateway
+  template:
+    metadata:
+      labels:
+        app: aqua-gateway
+      name: aqua-gateway
+    spec:
+      securityContext:
+        runAsUser: 11431
+        runAsGroup: 11433
+        fsGroup: 11433
+      serviceAccount: aqua-sa
+      restartPolicy: Always
+      containers:
+      - name: aqua-gateway
+        image: registry.aquasec.com/gateway:2022.4
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8082
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          tcpSocket:
+            port: 8443
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        ports:
+        - containerPort: 3622
+          protocol: TCP
+        - containerPort: 8443
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: aqua-csp-server-config
+        env:
+        - name: SCALOCK_DBPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: aqua-db
+        - name: SCALOCK_AUDIT_DBPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: aqua-audit-db
+        - name: AQUA_FF_OVERRIDES
+          value: '{"SLK-45284": true,"SLK-42747": true,"SLK-42525": true,"SLK-41253": true,"SLK-44691": true}'
+      #   volumeMounts:
+      #   - mountPath: /opt/aquasec/ssl
+      #     name: aqua-grpc-gateway
+      #     readOnly: true
+      # volumes:
+      # - name: aqua-grpc-gateway
+      #   secret:
+      #     secretName: aqua-grpc-gateway
+      #     items:
+      #     - key: aqua_gateway.crt
+      #       path: cert.pem
+      #     - key: aqua_gateway.key
+      #       path: key.pem
+      #     - key: rootCA.crt
+      #       path: ca.pem
+---
+apiVersion: v1
+data:
+  # Please follow instruction in document to generate new SSL certs
+  aqua_ke.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ1V2UHJPb0pRaDJvZVIKUFkvM0Rlb0dMbXVPZU1DbTdrS2lLVUwzUytTK2crczczOHVVZFd2bUVMY1ZqTS9FV1l6OTJmQk1wRWx1MU9vMAo5UTVET2lmTGd4SnZoSEJDeEpMNXlZc3RYalFMa3JiMlp3M1NraDQrdUF5c25mOVZvRStVVWlKOGZaSnd6bjA4CnJNRVhFK1hqZkRkSkwzRmZZSzdyck5mVHlyWHQvbU00UU5BNDZTUG55TjliSWRhQzJZVTcvVmJiT25XVngweWMKaFgxUTMyZXRjV1pUTEFzU3M4YmRXL0VUbG5Ed21RKzljNUgvSDh3UmxPck80VEhQRVcxTEtFTm1OTytCeFkyKwpUYTJOUG1oV1BGRkZVNmRNcUpsQzRpY25NYWYyWHBwQWZja0tSVThnNGloMUZkTnBaZHZic1VtSEovKzNkRnRJCnNPc0xVY3lqQWdNQkFBRUNnZ0VBRWt4UGRLVVhwRFNNc2djSFU0YndML045QXVtREZlWkE1MDg1TUZBelkyYTYKUlVMcWVpaVo3aE5IV3N6WWNKanR1ZnNhVDJ0MHAwQmxVYitHRWlvdzVCNExZaEhDZDh4VUlvdXpaaER0U1RFeQo5Z3hHakkyeVQ5ZjNvekxLeXo5dUd0cWg2SHZRVExWeWZjam85a3haMzBzVVNCb2drZkhFZ3pUZjFtdmRSdHB4CldrWThBY0pnR3QzNm1NYXZuR0xic1Q5N3o1TEl0RkZjUnNDYzhpdnI5YmxKRUhza203TkNEMkdiWkVyNU1Xdk0KOWk2MTYyN0N0OUczeGpaL3FhSHlCYjFYTlM4U2RLT3EvSk1jSXJETTFPTURicWpRcC96eFpQOUtwSzB4bUtTaQpnWGJDL294OERjWjNGZHorVUJEQXZBS0t4SHNJRHc1Zmp6UlJMTnVJelFLQmdRRERjeDhZdUN4Qm15b0NUNWZ3Cms0VUlWL1YvZmJON0J6RWNxWWZ2UmMxNUN4OTF1SytoNHpFNjVlcDVQM1R2YTJrVkhCcExCelJwQ1E3bzJ4d0QKcHFCbS8zd3NneHhTWU5URW1qYUx6dUFsaWJ2bzBkTVR4Tmc2T0xXU3U3M2pQK0RtSE1GMDFBODQ2c2I3VGxvUgpPUWtSMzByMHRZbDRmQ3AvVnBvTld5NFM5UUtCZ1FEQzBUbjNZMUxLQ0hwdDQ2cEYydTR1UE9JQnlMd1ROWWxMCkE1MjRvU0pIdmNNSDl1UzJrZTNvWER3RldhYnRrMUUyRGZkMlRsZXdHOHlHbFErNDBJUlhPYlI1UE9uYXlNTHkKb2hBbjFKaTdQbTYyU1JzR0NNVnp5cUh5UTN0UkU5V2FxK0VsaXR6VUxNbE85T21CNjg3VkcwMHN5M2M3NWJnZApOWlQ5RGF5U053S0JnQ3VZVUFWWmZ6V2JBSUhIY3lLTUpRNDVZRjd4a01rT1Q1d1BERzBJYXM1bTlydHhXR3VKCm0zK0JyUTBpWkZqSzRvTjg0emg5QU9tMHhZaVc1dWJCa2VHbmR2RU94WkJ5WE1NRmlza2dlY3Fsc0M0OEx4S24KdzNzcER3Y05yVXMxQWxzUmF1MCtKNjhRWHhYSzRqZ1pPcmFyMGJKSGs4UTJIZHlOV290RUhVREpBb0dBZHJsUgpEUjFmZjdZSS9sMEhFSWtxSzgxNG9rTzFzak1uRnlyOS9GMWVhY0FRVWhNNU1MWGYrWUgwSmdLTHd5N0xDQmtjCjNPRkRlUlNINE9DSWMwWEgwT3hldXAvUG1FQk81ZFN6NmNJYXpjbHZhUEZHWWJnSXROY2hPR1c5aWh4L1NVSkQKOUVBYThjYlZhNk8vaGlpeHBKZDl3YlhCVlNSYXZwby8wTE43bnFNQ2dZRUF3Z2Fndlc2UGNpcFo1M1d4NlIwagpERmVkbTYxV2RkQjViUmM5dkp1MmFuQm95SXNhM3l3VlBRNkRmcG0xYmg2Z0tIVmwxOTRCVHBMTGJ4YWV5VU9MCkFOQ05wZHNFeXN5TVdNd2tTYW5VY01rTkk3cncxeWJRN1pOYkNGY2xyMXR3dW1aQ2UvQktXeFFoVjRhSWNqTWUKejlJSHZQVVR5cHBwZW93QjhvT0tDUVk9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+  aqua_ke.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVtVENDQW9HZ0F3SUJBZ0lVZE9vRzdWM0s3aE5CNWg1ZC9sWTdkSWZqZE5Nd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0Z6RVZNQk1HQTFVRUF3d01ZV1J0YVhOemFXOXVYMk5oTUI0WERUSXlNVEF5TlRFek1qQTBNVm9YRFRJegpNVEF5TlRFek1qQTBNVm93SmpFa01DSUdBMVVFQXd3YllYRjFZUzFyZFdKbExXVnVabTl5WTJWeUxtRnhkV0V1CmMzWmpNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQWxMejZ6cUNVSWRxSGtUMlAKOXczcUJpNXJqbmpBcHU1Q29pbEM5MHZrdm9Qck85L0xsSFZyNWhDM0ZZelB4Rm1NL2Rud1RLUkpidFRxTlBVTwpRem9ueTRNU2I0UndRc1NTK2NtTExWNDBDNUsyOW1jTjBwSWVQcmdNckozL1ZhQlBsRklpZkgyU2NNNTlQS3pCCkZ4UGw0M3czU1M5eFgyQ3U2NnpYMDhxMTdmNWpPRURRT09rajU4amZXeUhXZ3RtRk8vMVcyenAxbGNkTW5JVjkKVU45bnJYRm1VeXdMRXJQRzNWdnhFNVp3OEprUHZYT1IveC9NRVpUcXp1RXh6eEZ0U3loRFpqVHZnY1dOdmsydApqVDVvVmp4UlJWT25US2laUXVJbkp6R245bDZhUUgzSkNrVlBJT0lvZFJYVGFXWGIyN0ZKaHlmL3QzUmJTTERyCkMxSE1vd0lEQVFBQm80SE5NSUhLTUFrR0ExVWRFd1FDTUFBd0N3WURWUjBQQkFRREFnWGdNQjBHQTFVZEpRUVcKTUJRR0NDc0dBUVVGQndNQ0JnZ3JCZ0VGQlFjREFUQlJCZ05WSFJFRVNqQklnaHRoY1hWaExXdDFZbVV0Wlc1bQpiM0pqWlhJdVlYRjFZUzV6ZG1PQ0tXRnhkV0V0YTNWaVpTMWxibVp2Y21ObGNpNWhjWFZoTG5OMll5NWpiSFZ6CmRHVnlMbXh2WTJGc01CMEdBMVVkRGdRV0JCUVBSV2RSZEt0UEhlemVibVpWeEN6b0UwM09hekFmQmdOVkhTTUUKR0RBV2dCUWhHaStSZTY3N09yYTRkNDgrUEI4TjZOZHhaakFOQmdrcWhraUc5dzBCQVFzRkFBT0NBZ0VBV2txWAo0RzFuTFoydHRSRzhzcTNYSGVaKzZnSWtnbXU1VjhBbUV5UE0vY0tsMFE1cmpERmVrKzl1TXlNUHdtUkRYQml1CjBGREg4SEo3NUZEM0Z0Y0lDWFIxUGJ1RythQzRYOUlERGgzampxbXBHVXB4M09lTFhrNGZ2S2ZTclRvcjV1a24KallMbUVHc3M2bFJSU1pjdGVUUEtSbXBnUURtVS8zdCtYTllYWU1JZGhWU25NaDBLOUdUdC9nczM0NXh6QVE3RQpjb3JWOWdxQzVScGFRcGRGTStiRDJLNHJZSFQ4Y0lLbTA5NWVFUWhFSFR6eE9FOWVkZkNrRFJickgrM1dvMW9sCmhrY1krV3FPQ1VFc29WU3ovYU5vOVU0RHBQYW0rYm1Rcjg1VWtkSmNNdTY3Rk85Z3VlUmhuajh3MjloWUZpRlMKUmQ0ZkRvOFJzNjBHS1ZTTWZzV0RRWWRWV2NUVllJYllyTXlYaTQ3eEtYQkh1blRRRkRMcWo2Vjh2MUFSSjljawpUaFpPSDc3dkRMM3hJRytiSm5Sd1hBWU1EdFJQOG1NTXBWVXpYQkZiWmpBZTRWNGlBdU81OUJPV1R1ODA5Z2I2CkpYY1d1Y0Q4OTRsNFhRcTNkUm1LZmIxTHBGWHRFWFh3aUtUTHc1bHU2MXBLU0R1ZW0zQ2I2OUxqL0hXaVNoS3gKZWtYTFVUTTdUK3E2ZkQyVUxDTHowTitPUWxsSDNuTFF1M1VhRFk0eVY4YzVkcW54MWRBZnJsZHQrNFdreGJtRAp6cjQyNFljNG85S29EQy9neklCdnJKbHpFclNjT3ZmNEJHcXkzUFNMUHgwMTN6N2MwSkZPUURhSGNTYzEzOTMyCkJYdmVFdlkyUDN1Q0Fmci9UcE9wUGlIbkpOd2RCMkRFTEJnRG4xaz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+kind: Secret
+metadata:
+  annotations:
+    description: Kube Enforcer SSL certificates to communicate with Kube API server
+  labels:
+    deployedby: aqua-yaml
+  name: kube-enforcer-ssl
+  namespace: aqua
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  annotations:
+    description: Aqua KubeEnforcer token secret
+  labels:
+    deployedby: aqua-yaml
+  name: aqua-kube-enforcer-token
+  namespace: aqua
+type: Opaque
+data:
+  ## In the Enforcers screen, edit the KubeEnforcer to get the token from the default KubeEnforcer group configuration. - Base64 encoded ##
+  token: "dG9rZW4ta2U="
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: kube-enforcer-admission-hook-config
+  namespace: aqua
+webhooks:
+  - name: imageassurance.aquasec.com
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["*"]
+        resources:
+          - pods
+          - deployments
+          - replicasets
+          - replicationcontrollers
+          - statefulsets
+          - daemonsets
+          - jobs
+          - cronjobs
+          - configmaps
+          - services
+          - roles
+          - rolebindings
+          - clusterroles
+          - clusterrolebindings
+          - customresourcedefinitions
+    clientConfig:
+      # Please follow instruction in document to generate new CA cert
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZEekNDQXZlZ0F3SUJBZ0lVR0RVUjhyVVdZUUdRU2R6QUtOVVluRmUvRTNrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0Z6RVZNQk1HQTFVRUF3d01ZV1J0YVhOemFXOXVYMk5oTUI0WERUSXlNVEF5TlRFek1qQTBNVm9YRFRJMQpNRGd4TkRFek1qQTBNVm93RnpFVk1CTUdBMVVFQXd3TVlXUnRhWE56YVc5dVgyTmhNSUlDSWpBTkJna3Foa2lHCjl3MEJBUUVGQUFPQ0FnOEFNSUlDQ2dLQ0FnRUEwbnV4a3dGRG5vLy9ZakVBa2RyR213N1F1aHFMaGhXMnRDZVcKOEpGT2w2R3Y5TXlxSVoza01sWkxwMGhVYWJEejJSd0U0MXJ1ZHhNaDNENFQzelBuUTh6RGNBaDJzRnZINjhGZwpmT1hINzZxcUkzalVnTlpqVXQrTG1pcmpEMm53VHhIVG1SSE1YY3QxbzBBUHBxTWN0WDZWN1dVS0lxT1VuWGFFCkMwOVBrd1l0S3BrTTlwSkw5YW55aHYwMkhCc2JIaVRoZ05NbVRiM0R2WWQyTGR0WitOVDJBTnF1Rmk5UkN2aTcKUHBVUFZOVURVZDM0ZXZ2K25Pb3M2N1VLWWVYNmdhV1VvNXcyWENMOWhSMmQzNHVPcTAxTXIvVFdKMzRJemI2awpkaVU2a0lqZWd4bVE4UTR3VnhOaC8vR296eHpoWUt2YTcyZE15MWRBdVQrS3VWd3JHYmwwMlhabXJuL2hQKzkvCnovWTJvNUpOKzJHUzlWdEMyWitKeGNRWStnK0dhQ0tHcUZhSVh6ek4zUmV5QUcyZCtxc2FTRUJQRG92dlBhZnQKVDY0WU5ZeFZxUHRWN3Z5TFNFYlhBaXlmTVYxRml1My9zdjNRRU1YM1ovcllPQ1pRVzdmbUlIZktwUFNTc1JVWApOZ3JUYkZTdGJrSSt2ZU92a3J2OXZIVFJXbGJlSFIwSEUyL1pmYlIrQWRvOXJXcmFqaGpKN1RBU1d4cmlNVXZZCmM5WHEyNzJuQzB0UzN6RWs5NWt0YjdJNGVia2lablRHTlZkb1ZVWVUzWUIwSGFoQTlTTVQvUDRQbWd1cUFBTCsKdlV2bW5OT0hDY0IwTDdBTmx1eWIxM1hiUnBUSVptY2lsbUZPWWY1MGF2bmw2c0x4M3VHWlQ3aFJkY2JQMG4zTgpVMUE2aTlzQ0F3RUFBYU5UTUZFd0hRWURWUjBPQkJZRUZDRWFMNUY3cnZzNnRyaDNqejQ4SHczbzEzRm1NQjhHCkExVWRJd1FZTUJhQUZDRWFMNUY3cnZzNnRyaDNqejQ4SHczbzEzRm1NQThHQTFVZEV3RUIvd1FGTUFNQkFmOHcKRFFZSktvWklodmNOQVFFTEJRQURnZ0lCQUczNzhDdW4xSHUyaHhmVklDMEN2Z1FibHp3bVFuN2syU2VCbDMvdgpOQ1Y2MUN6WjVCWEd5Yzh2SWt1emdhNGdOUG4zYS9QdU5hRGYyYVV4REU3bEJDMEhOYkxPYzNBaFRmQlNaeTlDCllGcnFYK25BL282N3J5YytQd0FMR09RQlRuVjdidEF6dFdjQmZNZjFFa2VnektlRHNVc0w0aE1HTHF4d0s2bXMKdzhXS1JNT0J5eUJlTW5EK3UzNUVocjUrQTV5bURBa0drcm9oQVN0dXVJMkx3Y3FvR1JuUXpQWXB5Ty9mRitYOApFMWVjOWxTRSs4YnQ0VnhTbThBY2V0aWFzSXB2bUtmZFIrcC9LMmVZZTNrV09HRHJvY1AzOHhucFlIc2tCZmV3Clk2SlhYVlc0aXhSTDRuSlJYTmtWSjYxOFVYb2RuRFFFYzc4SFY5S2NIdHpnQ08rYjQwaG1URE5RM3FRUi8yTXAKbEsvdktXMTFBTGRqVGJmSUtIckRuU1R2N3BZeG83Z2F3ekE2em9kVXI0aG1CSjFVSWYzT0tqWDNidzQwWDM1bwpYWThPcXRiVEVFZU1qdldvM3FZaXAzeG5tMEtJSDBpRGpxZW1BWEM2WmJOMHUxNU5SbGpOLzVNNVBNYXNGU3ZNCkVpaDU4MlNBNWpBU3grd1ltcXFsS2VEY01rM0t0SmxXaWV5cDVNS3lJYjh3NGJnMUh4dHdqMStTOVQ0SmVlamUKS05vbWttS0RtM2RBMmpNVktmNEZWc25oMUlnWWRQZTAxMldEQTFRL3hmUkx4VEhRc0V0ZVF0VXBGN3Zjc1g0aQpZOHJTN1F6RXdzUFBaNFJxOVAxRFpaVVBsTnp6RUtSSk9yUVdQTUhuU2xReGU4U1U5QmRMbjdwQzU1SklUbkpBCnp6bGsKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      service:
+        namespace: aqua
+        name: aqua-kube-enforcer
+    timeoutSeconds: 5
+    failurePolicy: Ignore
+    admissionReviewVersions: ["v1beta1"]
+    sideEffects: "None"
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: kube-enforcer-me-injection-hook-config
+  namespace: aqua
+webhooks:
+  - name: microenforcer.aquasec.com
+    clientConfig:
+      service:
+        name: aqua-kube-enforcer
+        namespace: aqua
+        path: "/mutate"
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZEekNDQXZlZ0F3SUJBZ0lVR0RVUjhyVVdZUUdRU2R6QUtOVVluRmUvRTNrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0Z6RVZNQk1HQTFVRUF3d01ZV1J0YVhOemFXOXVYMk5oTUI0WERUSXlNVEF5TlRFek1qQTBNVm9YRFRJMQpNRGd4TkRFek1qQTBNVm93RnpFVk1CTUdBMVVFQXd3TVlXUnRhWE56YVc5dVgyTmhNSUlDSWpBTkJna3Foa2lHCjl3MEJBUUVGQUFPQ0FnOEFNSUlDQ2dLQ0FnRUEwbnV4a3dGRG5vLy9ZakVBa2RyR213N1F1aHFMaGhXMnRDZVcKOEpGT2w2R3Y5TXlxSVoza01sWkxwMGhVYWJEejJSd0U0MXJ1ZHhNaDNENFQzelBuUTh6RGNBaDJzRnZINjhGZwpmT1hINzZxcUkzalVnTlpqVXQrTG1pcmpEMm53VHhIVG1SSE1YY3QxbzBBUHBxTWN0WDZWN1dVS0lxT1VuWGFFCkMwOVBrd1l0S3BrTTlwSkw5YW55aHYwMkhCc2JIaVRoZ05NbVRiM0R2WWQyTGR0WitOVDJBTnF1Rmk5UkN2aTcKUHBVUFZOVURVZDM0ZXZ2K25Pb3M2N1VLWWVYNmdhV1VvNXcyWENMOWhSMmQzNHVPcTAxTXIvVFdKMzRJemI2awpkaVU2a0lqZWd4bVE4UTR3VnhOaC8vR296eHpoWUt2YTcyZE15MWRBdVQrS3VWd3JHYmwwMlhabXJuL2hQKzkvCnovWTJvNUpOKzJHUzlWdEMyWitKeGNRWStnK0dhQ0tHcUZhSVh6ek4zUmV5QUcyZCtxc2FTRUJQRG92dlBhZnQKVDY0WU5ZeFZxUHRWN3Z5TFNFYlhBaXlmTVYxRml1My9zdjNRRU1YM1ovcllPQ1pRVzdmbUlIZktwUFNTc1JVWApOZ3JUYkZTdGJrSSt2ZU92a3J2OXZIVFJXbGJlSFIwSEUyL1pmYlIrQWRvOXJXcmFqaGpKN1RBU1d4cmlNVXZZCmM5WHEyNzJuQzB0UzN6RWs5NWt0YjdJNGVia2lablRHTlZkb1ZVWVUzWUIwSGFoQTlTTVQvUDRQbWd1cUFBTCsKdlV2bW5OT0hDY0IwTDdBTmx1eWIxM1hiUnBUSVptY2lsbUZPWWY1MGF2bmw2c0x4M3VHWlQ3aFJkY2JQMG4zTgpVMUE2aTlzQ0F3RUFBYU5UTUZFd0hRWURWUjBPQkJZRUZDRWFMNUY3cnZzNnRyaDNqejQ4SHczbzEzRm1NQjhHCkExVWRJd1FZTUJhQUZDRWFMNUY3cnZzNnRyaDNqejQ4SHczbzEzRm1NQThHQTFVZEV3RUIvd1FGTUFNQkFmOHcKRFFZSktvWklodmNOQVFFTEJRQURnZ0lCQUczNzhDdW4xSHUyaHhmVklDMEN2Z1FibHp3bVFuN2syU2VCbDMvdgpOQ1Y2MUN6WjVCWEd5Yzh2SWt1emdhNGdOUG4zYS9QdU5hRGYyYVV4REU3bEJDMEhOYkxPYzNBaFRmQlNaeTlDCllGcnFYK25BL282N3J5YytQd0FMR09RQlRuVjdidEF6dFdjQmZNZjFFa2VnektlRHNVc0w0aE1HTHF4d0s2bXMKdzhXS1JNT0J5eUJlTW5EK3UzNUVocjUrQTV5bURBa0drcm9oQVN0dXVJMkx3Y3FvR1JuUXpQWXB5Ty9mRitYOApFMWVjOWxTRSs4YnQ0VnhTbThBY2V0aWFzSXB2bUtmZFIrcC9LMmVZZTNrV09HRHJvY1AzOHhucFlIc2tCZmV3Clk2SlhYVlc0aXhSTDRuSlJYTmtWSjYxOFVYb2RuRFFFYzc4SFY5S2NIdHpnQ08rYjQwaG1URE5RM3FRUi8yTXAKbEsvdktXMTFBTGRqVGJmSUtIckRuU1R2N3BZeG83Z2F3ekE2em9kVXI0aG1CSjFVSWYzT0tqWDNidzQwWDM1bwpYWThPcXRiVEVFZU1qdldvM3FZaXAzeG5tMEtJSDBpRGpxZW1BWEM2WmJOMHUxNU5SbGpOLzVNNVBNYXNGU3ZNCkVpaDU4MlNBNWpBU3grd1ltcXFsS2VEY01rM0t0SmxXaWV5cDVNS3lJYjh3NGJnMUh4dHdqMStTOVQ0SmVlamUKS05vbWttS0RtM2RBMmpNVktmNEZWc25oMUlnWWRQZTAxMldEQTFRL3hmUkx4VEhRc0V0ZVF0VXBGN3Zjc1g0aQpZOHJTN1F6RXdzUFBaNFJxOVAxRFpaVVBsTnp6RUtSSk9yUVdQTUhuU2xReGU4U1U5QmRMbjdwQzU1SklUbkpBCnp6bGsKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    timeoutSeconds: 5
+    failurePolicy: Ignore
+    admissionReviewVersions: ["v1beta1"]
+    sideEffects: "None"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aqua-kube-enforcer-sa
+  namespace: aqua
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aqua-kube-enforcer
+rules:
+  - apiGroups: ["*"]
+    resources: ["pods", "nodes", "namespaces", "deployments", "jobs", "cronjobs", "daemonsets", "replicasets", "replicationcontrollers", "statefulsets", "clusterroles", "clusterrolebindings", "componentstatuses", "services" ]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [ "*" ]
+    resources: [ "secrets" ]
+    verbs: [ "get", "list", "watch", "update", "create", "delete"]
+  - apiGroups: ["aquasecurity.github.io"]
+    resources: ["configauditreports", "clusterconfigauditreports"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["*"]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "update", "create"]
+  - apiGroups:
+      - "*"
+    resources:
+      - roles
+      - rolebindings
+      - clusterroles
+      - clusterrolebindings
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "*"
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aqua-kube-enforcer
+  namespace: aqua
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: aqua-kube-enforcer
+subjects:
+  - kind: ServiceAccount
+    name: aqua-kube-enforcer-sa
+    namespace: aqua
+---
+# This role specific to kube-bench scans permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aqua-kube-enforcer
+  namespace: aqua
+rules:
+  - apiGroups: ["*"]
+    resources: ["pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["*"]
+    resources: ["jobs"]
+    verbs: ["create", "delete"]
+  - apiGroups: ["*"]
+    resources: ["pods"]
+    verbs: ["create", "delete"]
+  - apiGroups: ["*"]
+    resources: ["leases"]
+    verbs: ["get", "list", "create", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aqua-kube-enforcer
+  namespace: aqua
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: aqua-kube-enforcer
+subjects:
+- kind: ServiceAccount
+  name: aqua-kube-enforcer-sa
+  namespace: aqua
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aqua-csp-kube-enforcer
+  namespace: aqua
+data:
+  # Specify whether to enable/disable the cache by using "yes", "true", "no", "false" values.
+  # Default value is "yes".
+  AQUA_ENABLE_CACHE: "yes"
+  # Specify cache expiration period in seconds.
+  # Default value is 60
+  AQUA_CACHE_EXPIRATION_PERIOD: "60"
+  TLS_SERVER_CERT_FILEPATH: "/certs/aqua_ke.crt"
+  TLS_SERVER_KEY_FILEPATH: "/certs/aqua_ke.key"
+  ## Based on your ingress config update the name here ##
+  AQUA_GATEWAY_SECURE_ADDRESS: "aqua-gateway.aqua:8443"
+  AQUA_TLS_PORT: "8443"
+  AQUA_LOGICAL_NAME: ""
+  # Cluster display name in aqua enterprise.
+  CLUSTER_NAME: "Default-cluster-name"
+  # Enable KA policy scanning via starboard
+  AQUA_KAP_ADD_ALL_CONTROL: "true"
+  AQUA_WATCH_CONFIG_AUDIT_REPORT: "true"
+  AQUA_KB_IMAGE_NAME: "aquasec/kube-bench:v0.6.8"
+  AQUA_ME_IMAGE_NAME: "registry.aquasec.com/microenforcer:2022.4"
+  AQUA_KB_ME_REGISTRY_NAME: "aqua-registry"
+  AQUA_ENFORCER_DS_NAME: "aqua-agent"               #Sets Daemonset name
+  AQUA_EXPRESS_MODE: "true"
+  #Enable Skipping Kube-Bench on nodes based on node labels
+  # AQUA_NODE_LABELS_TO_SKIP_KB: ""  #Comma-separated node-labels for nodes on which Kube-Bench is to be skipped. key1=val1,key2=val2,...
+  # Enable the below Env for mTLS between kube-enforcer and gateway
+  # AQUA_PUBLIC_KEY: "/opt/aquasec/ssl/aqua_kube-enforcer.crt"
+  # AQUA_PRIVATE_KEY: "/opt/aquasec/ssl/aqua_kube-enforcer.key"
+  # AQUA_ROOT_CA: "/opt/aquasec/ssl/rootCA.crt"
+---
+# Starboard resource yamls################
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: configauditreports.aquasecurity.github.io
+  labels:
+    app.kubernetes.io/managed-by: starboard
+    app.kubernetes.io/version: "0.15.10"
+spec:
+  group: aquasecurity.github.io
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - jsonPath: .report.scanner.name
+          type: string
+          name: Scanner
+          description: The name of the config audit scanner
+        - jsonPath: .metadata.creationTimestamp
+          type: date
+          name: Age
+          description: The age of the report
+        - jsonPath: .report.summary.criticalCount
+          type: integer
+          name: Critial
+          priority: 1
+          description: The number of failed checks with critial severity
+        - jsonPath: .report.summary.highCount
+          type: integer
+          name: High
+          priority: 1
+          description: The number of failed checks with high severity
+        - jsonPath: .report.summary.mediumCount
+          type: integer
+          name: Medium
+          priority: 1
+          description: The number of failed checks with medium severity
+        - jsonPath: .report.summary.lowCount
+          type: integer
+          name: Low
+          priority: 1
+          description: The number of failed checks with low severity
+      schema:
+        openAPIV3Schema:
+          x-kubernetes-preserve-unknown-fields: true
+          type: object
+  scope: Namespaced
+  names:
+    singular: configauditreport
+    plural: configauditreports
+    kind: ConfigAuditReport
+    listKind: ConfigAuditReportList
+    categories: []
+    shortNames:
+      - configaudit
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterconfigauditreports.aquasecurity.github.io
+  labels:
+    app.kubernetes.io/managed-by: starboard
+spec:
+  group: aquasecurity.github.io
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - jsonPath: .report.scanner.name
+          type: string
+          name: Scanner
+          description: The name of the config audit scanner
+        - jsonPath: .metadata.creationTimestamp
+          type: date
+          name: Age
+          description: The age of the report
+        - jsonPath: .report.summary.dangerCount
+          type: integer
+          name: Danger
+          priority: 1
+          description: The number of checks that failed with Danger status
+        - jsonPath: .report.summary.warningCount
+          type: integer
+          name: Warning
+          priority: 1
+          description: The number of checks that failed with Warning status
+        - jsonPath: .report.summary.passCount
+          type: integer
+          name: Pass
+          priority: 1
+          description: The number of checks that passed
+      schema:
+        openAPIV3Schema:
+          x-kubernetes-preserve-unknown-fields: true
+          type: object
+  scope: Cluster
+  names:
+    singular: clusterconfigauditreport
+    plural: clusterconfigauditreports
+    kind: ClusterConfigAuditReport
+    listKind: ClusterConfigAuditReportList
+    categories: []
+    shortNames:
+      - clusterconfigaudit
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: starboard-policies-config
+  namespace: aqua
+  labels:
+    app.kubernetes.io/name: starboard-operator
+    app.kubernetes.io/instance: starboard-operator
+    app.kubernetes.io/version: "0.15.10"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: starboard-operator
+  namespace: aqua
+imagePullSecrets:
+  - name: aqua-registry
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: starboard
+  namespace: aqua
+data:
+  configAuditReports.scanner: Conftest
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: starboard
+  namespace: aqua
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: starboard-conftest-config
+  namespace: aqua
+data:
+  conftest.imageRef: registry.aquasec.com/kube-enforcer:2022.4
+  conftest.resources.requests.cpu: 1m
+  conftest.resources.requests.memory: 10M
+  conftest.resources.limits.cpu: 15m
+  conftest.resources.limits.memory: 40M
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: starboard-operator
+  namespace: aqua
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/log
+      - replicationcontrollers
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+      - serviceaccounts
+      - resourcequotas
+      - limitranges
+    verbs:
+      - list
+      - watch
+      - get
+      - create
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+  - apiGroups:
+      - apps
+    resources:
+      - replicasets
+      - statefulsets
+      - daemonsets
+      - deployments
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+      - cronjobs
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles
+      - rolebindings
+      - clusterroles
+      - clusterrolebindings
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - create
+      - delete
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - networkpolicies
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - policy
+    resources:
+      - podsecuritypolicies
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - aquasecurity.github.io
+    resources:
+      - vulnerabilityreports
+      - configauditreports
+      - clusterconfigauditreports
+      - ciskubebenchreports
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: starboard-operator
+  namespace: aqua
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: starboard-operator
+subjects:
+  - kind: ServiceAccount
+    name: starboard-operator
+    namespace: aqua
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starboard-operator
+  namespace: aqua
+  labels:
+    app: starboard-operator
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: starboard-operator
+  template:
+    metadata:
+      labels:
+        app: starboard-operator
+    spec:
+      serviceAccountName: starboard-operator
+      automountServiceAccountToken: true
+      securityContext: {}
+      containers:
+        - name: operator
+          image: docker.io/aquasec/starboard-operator:0.15.10
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: false
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: OPERATOR_NAMESPACE
+              value: aqua
+            - name: OPERATOR_TARGET_NAMESPACES
+              value: ""
+            - name: OPERATOR_LOG_DEV_MODE
+              value: "false"
+            - name: OPERATOR_CONCURRENT_SCAN_JOBS_LIMIT
+              value: "10"
+            - name: OPERATOR_SCAN_JOB_RETRY_AFTER
+              value: 30s
+            - name: OPERATOR_METRICS_BIND_ADDRESS
+              value: :8080
+            - name: OPERATOR_HEALTH_PROBE_BIND_ADDRESS
+              value: :9090
+            - name: OPERATOR_CIS_KUBERNETES_BENCHMARK_ENABLED
+              value: "false"
+            - name: OPERATOR_VULNERABILITY_SCANNER_ENABLED
+              value: "false"
+            - name: OPERATOR_BATCH_DELETE_LIMIT
+              value: "10"
+            - name: OPERATOR_BATCH_DELETE_DELAY
+              value: "10s"
+            - name: OPERATOR_CLUSTER_COMPLIANCE_ENABLED
+              value: "false"
+          ports:
+            - name: metrics
+              containerPort: 8080
+            - name: probes
+              containerPort: 9090
+          readinessProbe:
+            httpGet:
+              path: /readyz/
+              port: probes
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz/
+              port: probes
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aqua-kube-enforcer
+  namespace: aqua
+spec:
+  ports:
+    - port: 443
+      targetPort: 8443
+  selector:
+    app: aqua-kube-enforcer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aqua-kube-enforcer
+  namespace: aqua
+  labels:
+    app: aqua-kube-enforcer
+    aqua.component: kubeenforcer
+spec:
+  #This is the recommended value, but can be configured
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: aqua-kube-enforcer
+        aqua.component: kubeenforcer
+    spec:
+      securityContext:
+        runAsUser: 11431
+        runAsGroup: 11433
+        fsGroup: 11433
+      serviceAccountName: aqua-kube-enforcer-sa
+      containers:
+        - name: kube-enforcer
+          image: registry.aquasec.com/kube-enforcer:2022.4
+          imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          ports:
+            - containerPort: 8443
+              protocol: TCP
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: AQUA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: aqua-kube-enforcer-token
+                  key: token
+                  optional: true
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          envFrom:
+            - configMapRef:
+                name: aqua-csp-kube-enforcer
+          volumeMounts:
+            - name: "kube-enforcer-ssl"
+              mountPath: "/certs"
+          #  - name: aqua-grpc-kube-enforcer
+          #    mountPath: /opt/aquasec/ssl
+      volumes:
+        - name: "kube-enforcer-ssl"
+          secret:
+            secretName: "kube-enforcer-ssl"
+            items:
+              - key: aqua_ke.crt
+                path: aqua_ke.crt
+              - key: aqua_ke.key
+                path: aqua_ke.key
+      #  - name: aqua-grpc-kube-enforcer
+      #    secret:
+      #      secretName: aqua-grpc-kube-enforcer
+      imagePullSecrets:
+        - name: aqua-registry
+  selector:
+    matchLabels:
+      app: aqua-kube-enforcer
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: aqua-agent
+    aqua.component: enforcer
+  name: aqua-agent
+  namespace: aqua
+spec:
+  selector:
+    matchLabels:
+      app: aqua-agent
+  template:
+    metadata:
+      labels:
+        app: aqua-agent
+      name: aqua-agent
+      namespace: aqua
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/aqua-agent: unconfined
+    spec:
+      containers:
+      - env:
+        - name: AQUA_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: AQUA_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: enforcer-token
+        envFrom:
+        - configMapRef:
+            name: aqua-csp-enforcer
+        image: registry.aquasec.com/enforcer:2022.4
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8096
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /readinessz
+            port: 8096
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        ports:
+        - containerPort: 8096
+          protocol: TCP
+        name: aqua-agent
+        resources: {}
+        securityContext:
+          privileged: false
+          capabilities:
+              add:
+                - SYS_ADMIN
+                - NET_ADMIN
+                - NET_RAW
+                - SYS_PTRACE
+                - KILL
+                - MKNOD
+                - SETGID
+                - SETUID
+                - SYS_MODULE
+                - AUDIT_CONTROL
+                - SYSLOG
+                - SYS_CHROOT
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/run
+          name: var-run
+        - mountPath: /dev
+          name: dev
+        - mountPath: /host/sys
+          name: sys
+          readOnly: true
+        - mountPath: /host/proc
+          name: proc
+          readOnly: true
+        - mountPath: /host/etc
+          name: etc
+          readOnly: true
+        - mountPath: /host/opt/aquasec
+          name: aquasec
+          readOnly: true
+        - mountPath: /opt/aquasec/tmp
+          name: aquasec-tmp
+        - mountPath: /opt/aquasec/audit
+          name: aquasec-audit
+        - mountPath: /data
+          name: aquasec-data
+        # - mountPath: /opt/aquasec/ssl
+        #   name: aqua-grpc-gateway
+      dnsPolicy: ClusterFirst
+      hostPID: true
+      imagePullSecrets:
+      - name: aqua-registry
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccount: aqua-sa
+      serviceAccountName: aqua-sa
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /var/run
+          type: ""
+        name: var-run
+      - hostPath:
+          path: /dev
+          type: ""
+        name: dev
+      - hostPath:
+          path: /sys
+          type: ""
+        name: sys
+      - hostPath:
+          path: /proc
+          type: ""
+        name: proc
+      - hostPath:
+          path: /etc
+          type: ""
+        name: etc
+      - hostPath:
+          path: /var/lib/aquasec
+          type: ""
+        name: aquasec
+      - hostPath:
+          path: /var/lib/aquasec/tmp
+          type: ""
+        name: aquasec-tmp
+      - hostPath:
+          path: /var/lib/aquasec/audit
+          type: ""
+        name: aquasec-audit
+      - hostPath:
+          path: /var/lib/aquasec/data
+          type: ""
+        name: aquasec-data
+      # - name: aqua-grpc-enforcer
+      #   secret:
+      #     secretName: aqua-grpc-enforcer
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
