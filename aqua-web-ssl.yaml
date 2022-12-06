@@ -68,10 +68,10 @@ spec:
         - name: AQUA_FF_OVERRIDES
           value: '{"SLK-45284": true,"SLK-42747": true,"SLK-42525": true,"SLK-41253": true,"SLK-44691": true}'
         volumeMounts: 
-        - mountPath: "/etc/ssl/certs/aqua-ssl.crt" # The mountpoint inside the aqua-web container 
+        - mountPath: "/etc/ssl/certs/<the_ssl_cert_name>.crt" # The mountpoint inside the aqua-web container 
           name: "ssl-certs"
       volumes:
       - name: "ssl-certs"
         nfs:
           server: 192.168.200.90 # IP to NFS server
-          path: "/nfs/ssl/aqua-ssl.crt" # The exported directory
+          path: "/nfs/<the_ssl_cert_name>.crt" # The exported directory
