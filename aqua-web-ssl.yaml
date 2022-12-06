@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aqua-web
+  namespace: aqua
+  labels:
+    app: aqua-web
+    aqua.component: server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aqua-web
+  template:
+    metadata:
+      labels:
+        app: aqua-web
+      name: aqua-web
+    spec:
+      securityContext:
+        runAsUser: 11431
+        runAsGroup: 11433
+        fsGroup: 11433
+      serviceAccount: aqua-sa
+      restartPolicy: Always
+      containers:
+      - name: aqua-web
+        image: registry.aquasec.com/console:2022.4
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8443
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: aqua-csp-server-config
+        # - secretRef:
+        #     name: aqua-csp-server-secret
+        env:
+        - name: AQUA_PUBSUB_DBPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: aqua-db
+        - name: SCALOCK_AUDIT_DBPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: aqua-audit-db
+        - name: SCALOCK_DBPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: aqua-db
+        - name: AQUA_FF_OVERRIDES
+          value: '{"SLK-45284": true,"SLK-42747": true,"SLK-42525": true,"SLK-41253": true,"SLK-44691": true}'
+        volumeMounts: 
+        - mountPath: "/etc/ssl/certs/aqua-ssl.crt" # The mountpoint inside the aqua-web container 
+          name: "ssl-certs"
+      volumes:
+      - name: "ssl-certs"
+        nfs:
+          server: 192.168.200.90 # IP to NFS server
+          path: /nfs/ssl # The exported directory
